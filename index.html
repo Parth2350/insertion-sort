@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Insertion Sort Visualizer</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#0b1220;--accent:#7c3aed;
+      --muted:#8892a6;--glass:rgba(255,255,255,0.04);
+      --success:#10b981;--danger:#ef4444;--width:900px;
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071024 0%,#07172a 100%);color:#e6eef8}
+    .wrap{max-width:var(--width);margin:36px auto;padding:24px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.7)}
+    header{margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{color:var(--muted);margin:0;font-size:13px}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+    .card{background:var(--card);padding:12px;border-radius:10px;display:flex;gap:12px;align-items:center}
+    label{font-size:13px;color:var(--muted);margin-right:6px}
+    input[type=range]{width:160px}
+    input[type=text]{padding:6px;border:none;border-radius:6px;background:var(--glass);color:#fff;width:200px}
+    .btn{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .btn.danger{background:var(--danger)}
+    .btn:active{transform:translateY(1px)}
+    .canvas-wrap{height:320px;background:var(--glass);border-radius:10px;padding:12px;display:flex;align-items:flex-end;gap:6px;overflow:hidden}
+    .bar{flex:1 1 auto;margin:0 2px;border-radius:6px;display:flex;align-items:flex-end;justify-content:center}
+    .bar .value{transform:translateY(-6px);font-size:11px;color:#ffffffcc}
+    .bar.default{background:linear-gradient(180deg,#3b82f6 0%,#2563eb 100%)}
+    .bar.comparing{background:linear-gradient(180deg,#f59e0b 0%,#f97316 100%)}
+    .bar.key{background:linear-gradient(180deg,#7c3aed 0%,#6d28d9 100%)}
+    .bar.sorted{background:linear-gradient(180deg,#34d399 0%,#10b981 100%)}
+    footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--muted);font-size:13px}
+
+    /* --- Pseudocode panel --- */
+    .logic-panel{
+      margin-top:20px;
+      background:var(--card);
+      padding:16px;
+      border-radius:10px;
+      font-size:14px;
+      line-height:1.5;
+      font-family:monospace;
+      white-space:pre;
+    }
+    .logic-line{color:var(--muted)}
+    .logic-line.active{background:rgba(124,58,237,0.2);color:#fff;border-radius:4px;padding:2px 4px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Insertion Sort Visualizer</h1>
+      <p class="lead">Enter numbers or generate random ones. Control speed, size, stop anytime. Pseudocode below shows current step.</p>
+    </header>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="card">
+        <label for="size">Size</label>
+        <input id="size" type="range" min="5" max="60" value="20">
+        <span id="sizeVal" style="color:var(--muted);font-size:13px">20</span>
+      </div>
+      <div class="card">
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="1" max="1000" value="250">
+        <span id="speedVal" style="color:var(--muted);font-size:13px">250 ms</span>
+      </div>
+      <div class="card">
+        <input id="userInput" type="text" placeholder="Enter numbers, e.g. 34,12,5">
+        <button id="useInput" class="btn secondary">Use Input</button>
+      </div>
+      <div class="card">
+        <button id="generate" class="btn">Generate</button>
+        <button id="shuffle" class="btn secondary">Shuffle</button>
+      </div>
+      <div class="card">
+        <button id="start" class="btn">Start</button>
+        <button id="pause" class="btn secondary">Pause</button>
+        <button id="stop" class="btn danger">Stop</button>
+      </div>
+      <div class="card">
+        <label>Comparisons:</label><strong id="comparisons">0</strong>
+      </div>
+      <div class="card">
+        <label>Writes:</label><strong id="writes">0</strong>
+      </div>
+    </div>
+
+    <!-- Bars -->
+    <div id="canvas" class="canvas-wrap"></div>
+
+    <footer>
+      <div>Algorithm: <strong>Insertion Sort</strong></div>
+      <div id="status">Status: <em>Idle</em></div>
+    </footer>
+
+    <!-- Pseudocode Panel -->
+    <div id="logic" class="logic-panel">
+<span id="line1" class="logic-line">for i = 1 to n-1:</span>
+<span id="line2" class="logic-line">    key = arr[i]</span>
+<span id="line3" class="logic-line">    j = i - 1</span>
+<span id="line4" class="logic-line">    while j >= 0 and arr[j] > key:</span>
+<span id="line5" class="logic-line">        arr[j+1] = arr[j]</span>
+<span id="line6" class="logic-line">        j = j - 1</span>
+<span id="line7" class="logic-line">    arr[j+1] = key</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas=document.getElementById('canvas');
+    const sizeInput=document.getElementById('size');
+    const speedInput=document.getElementById('speed');
+    const sizeVal=document.getElementById('sizeVal');
+    const speedVal=document.getElementById('speedVal');
+    const generateBtn=document.getElementById('generate');
+    const shuffleBtn=document.getElementById('shuffle');
+    const startBtn=document.getElementById('start');
+    const pauseBtn=document.getElementById('pause');
+    const stopBtn=document.getElementById('stop');
+    const comparisonsEl=document.getElementById('comparisons');
+    const writesEl=document.getElementById('writes');
+    const statusEl=document.getElementById('status');
+    const inputBox=document.getElementById('userInput');
+    const useInputBtn=document.getElementById('useInput');
+    const logicLines=[...document.querySelectorAll('.logic-line')];
+
+    let arr=[],bars=[];
+    let running=false,paused=false,stopFlag=false;
+    let speed=250,comparisons=0,writes=0;
+
+    function highlightLine(idx){
+      logicLines.forEach((line,i)=>line.classList.toggle('active',i===idx));
+    }
+
+    function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+    function createArray(n){return Array.from({length:n},()=>randInt(10,450));}
+    function renderArray(a){
+      canvas.innerHTML='';bars=[];
+      const max=Math.max(...a);
+      a.forEach(v=>{
+        const bar=document.createElement('div');
+        bar.className='bar default';
+        bar.style.height=(v/max*300)+'px';
+        bar.style.width=`calc((100% / ${a.length}) - 4px)`;
+        const val=document.createElement('div');
+        val.className='value';val.textContent=v;
+        bar.appendChild(val);canvas.appendChild(bar);bars.push(bar);
+      });
+    }
+    function updateMetrics(){comparisonsEl.textContent=comparisons;writesEl.textContent=writes;}
+    function setStatus(t){statusEl.innerHTML='Status: <em>'+t+'</em>';}
+    async function sleep(ms){let waited=0;while(waited<ms){if(stopFlag)return;if(paused)await new Promise(r=>setTimeout(r,60));else await new Promise(r=>setTimeout(r,60));waited+=60;}}
+    
+    function* insertionGen(a){
+      for(let i=1;i<a.length;i++){
+        highlightLine(0);
+        let key=a[i]; highlightLine(1);
+        let j=i-1; highlightLine(2);
+        while(j>=0 && a[j]>key){
+          highlightLine(3);
+          comparisons++;
+          yield {type:'compare',i:j,j:i};
+          a[j+1]=a[j]; writes++; highlightLine(4);
+          yield {type:'write',idx:j+1,val:a[j+1]};
+          j--; highlightLine(5);
+          yield {type:'pause'};
+        }
+        if(j>=0){comparisons++;}
+        a[j+1]=key; writes++; highlightLine(6);
+        yield {type:'write',idx:j+1,val:key};
+      }
+      yield {type:'done'};
+    }
+
+    async function runInsertion(){
+      running=true;stopFlag=false;paused=false;
+      setStatus('Running');comparisons=0;writes=0;updateMetrics();
+      const a=[...arr];const gen=insertionGen(a);let step=gen.next();
+      while(!step.done && !stopFlag){
+        const act=step.value;
+        bars.forEach(b=>b.className='bar default');
+        if(act.type==='compare'){bars[act.i].className='bar comparing';}
+        else if(act.type==='write'){arr[act.idx]=act.val;const max=Math.max(...arr);bars[act.idx].style.height=(arr[act.idx]/max*300)+'px';bars[act.idx].querySelector('.value').textContent=arr[act.idx];}
+        else if(act.type==='done'){bars.forEach(b=>b.className='bar sorted');setStatus('Completed');highlightLine(-1);}
+        updateMetrics();
+        await sleep(speed);
+        step=gen.next();
+      }
+      if(stopFlag){setStatus('Stopped');highlightLine(-1);}
+      running=false;
+    }
+
+    // Controls
+    sizeInput.oninput=()=>{sizeVal.textContent=sizeInput.value;generate();}
+    speedInput.oninput=()=>{speed=+speedInput.value;speedVal.textContent=speed+' ms';}
+    generateBtn.onclick=()=>generate();
+    shuffleBtn.onclick=()=>{arr.sort(()=>Math.random()-0.5);renderArray(arr);}
+    startBtn.onclick=()=>{if(!running)runInsertion();}
+    pauseBtn.onclick=()=>{paused=!paused;setStatus(paused?'Paused':'Running');pauseBtn.textContent=paused?'Resume':'Pause';}
+    stopBtn.onclick=()=>{stopFlag=true;running=false;setStatus('Stopped');highlightLine(-1);}
+    useInputBtn.onclick=()=>{const values=inputBox.value.split(',').map(x=>parseInt(x.trim())).filter(x=>!isNaN(x));if(values.length){arr=values;renderArray(arr);comparisons=writes=0;updateMetrics();setStatus('Idle');highlightLine(-1);}}
+
+    function generate(){arr=createArray(+sizeInput.value);renderArray(arr);comparisons=writes=0;updateMetrics();setStatus('Idle');running=false;paused=false;stopFlag=false;pauseBtn.textContent='Pause';highlightLine(-1);}
+    generate();
+  </script>
+</body>
+</html>
